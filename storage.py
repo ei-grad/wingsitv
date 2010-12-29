@@ -35,7 +35,7 @@ __all__ = [ 'storage' ]
 import os
 import sys
 
-from utm5client import logging
+import logging
 
 import sqlite3
 
@@ -44,17 +44,17 @@ class Storage(object):
 
   def __init__ (self, opt):
 
-    self.backend = opt.db_backend
+    self.backend = opt.backend
     self.hours = opt.hours
 
-    if self.backend = 'sqlite':
+    if self.backend == 'sqlite3':
 
-      self.dbname = os.join(opt.workdir, 'sqlite.db')
+      self.dbname = os.path.join(opt.workdir, 'sqlite.db')
       if not os.path.exists(self.dbname):
         self._sqlite_createdb()
       self.db = sqlite3.connect(self.dbname)
 
-    elif self.backend = 'plaintext':
+    elif self.backend == 'plaintext':
       self.dbname = os.join(opt.workdir, 'data.txt')
       if not os.path.exists(self.dbname):
         self._plain_createdb()
@@ -102,14 +102,14 @@ create table out (
     time char(8),
     amount bigint,
     primary key(contrid, date, time)
-)
+);
 
 create index contrid_idx on in (contrid);
 create index contrid_idx on out (contrid);
 
 create table fixeddays (
     date char(8)
-)
+);
             """)
 
 

@@ -42,7 +42,7 @@ import datetime
 import logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(funcName)s: %(message)s")
 
-from storage import storage
+from storage import Storage
 
 select_contract = lambda contracts: list(contracts)[0]
 
@@ -53,22 +53,24 @@ class UTM5Client(object):
   contracts_re = re.compile(r'''<A HREF="\?FORMNAME=IP_CONTRACT_INFO&SID=(?P<sid>\w+)&CONTR_ID=(?P<id>\d+)&NLS=WR" TITLE="Посмотреть данные по договору" target="_self" method="post">(?P<name>\w+)</A>
 &nbsp;<TD ALIGN=CENTER>&nbsp;(?P<client>[\w ]+)&nbsp;<TD ALIGN=RIGHT>&nbsp;\d+.\d\d&nbsp;<TD ALIGN=RIGHT>&nbsp;\d+.\d\d&nbsp;''', re.MULTILINE)
 
-  def __init__(self, utm5_url, opt):
+  def __init__(self, opt):
     self.url = opt.url.strip('/')
 
-    if opt.begin < opt.end:
-      self.night = list(range(opt.begin, opt.end))
+    begin, end = [ int(i) for i in opt.hours.split('-') ]
+
+    if begin < end:
+      self.night = list(range(begin, end))
     else:
       self.night = list(range(0, end) + range(begin, 24))
 
-    self.db = storage(opt)
+    self.db = Storage(opt)
 
   def auth(self, login, passwd):
     """
       Authenticates and retrieves a list of available contracts.
     """
-    logging.info('Authenticating as {0}...'.format(user))
-    res = urlopen(self.utm5_url+'/!w3_p_main.showform',
+    logging.info('Authenticating as {0}...'.format(login))
+    res = urlopen(self.url+'/!w3_p_main.showform',
       data=urlencode({'SID': '',
                     'NLS': 'WR',
                     'USERNAME': login,
@@ -79,11 +81,13 @@ class UTM5Client(object):
 
     self.contracts = {c.group('id'): c.groupdict() for c in self.contracts_re.finditer(res)}
 
-    if not contracts:
+    if not self.contracts:
       logging.error('Authentication failed! No contracts!')
       raise Exception('Authentication failed! No contracts!')
 
-    self.set_contract(list(self.contracts)[0]['sid'])
+    logging.info(self.contracts)
+
+    self.set_contract(list(self.contracts)[0])
 
   def set_contract(self, contrid):
     self.sid = self.contracts[str(contrid)]['sid']
@@ -106,7 +110,7 @@ class UTM5Client(object):
     month = '%.2d.%d' % (date.month, date.year)
     day = date.day
 
-    res = urlopen(self.utm5_url+'/!w3_p_main.showform',
+    res = urlopen(self.url+'/!w3_p_main.showform',
       data=urlencode({
                 'CONTRACTID': self.contractid,
                 "DIR": "",
@@ -208,17 +212,17 @@ def utm5client_main():
   opt, args = parser.parse_args()
 
   if opt.login is None:
-    opt.login = input('login:')
+    opt.login = input('Login:')
 
   if opt.passwd is None:
-    opt.passwd = getpass('password:')
+    opt.passwd = getpass('Password:')
 
   client = UTM5Client(opt)
 
   if not os.path.exists(opt.workdir):
     os.mkdir(opt.workdir)
 
-  client.auth(login, passwd)
+  client.auth(opt.login, opt.passwd)
 
 if __name__ == '__main__':
   utm5client_main()
