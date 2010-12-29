@@ -42,75 +42,80 @@ import sqlite3
 
 class Storage(object):
 
-  def __init__ (self, opt):
+  def __init__(self, opt):
+    pass
 
-    self.backend = opt.backend
-    self.hours = opt.hours
-
-    if self.backend == 'sqlite3':
-
-      self.dbname = os.path.join(opt.workdir, 'sqlite.db')
-      if not os.path.exists(self.dbname):
-        self._sqlite_createdb()
-      self.db = sqlite3.connect(self.dbname)
-
-    elif self.backend == 'plaintext':
-      self.dbname = os.join(opt.workdir, 'data.txt')
-      if not os.path.exists(self.dbname):
-        self._plain_createdb()
-
-    else:
-      raise Exception('unknown storage backend')
-
-  def _plain_update_data(self, date):
+  def createdb(self):
+    """Create or erase database."""
     raise NotImplemented()
 
-  def _plain_get_amounts(self, date):
+  def date_is_fixed(self, date):
+    """Check if all data for specified date is cached and fixed."""
     raise NotImplemented()
 
-  def _plain_date_is_fixed(self, date):
+  def update_data(self, data):
+    """Update database with specified data."""
     raise NotImplemented()
 
-  def _plain_createdb(self):
+  def fix_date(self, date):
+    """Mark cached data for specified date as fixed."""
     raise NotImplemented()
 
-  def _sqlite_update_data(self, date):
+  def get_amounts(self, contrid, date, hours):
+    """Return cached traffic amounts for specified date split and specified hours."""
     raise NotImplemented()
 
-  def _sqlite_get_amounts(self, date):
-    raise NotImplemented()
 
-  def _sqlite_date_is_fixed(self, date):
-    raise NotImplemented()
+class SqliteStorage(Storage):
 
-  def _sqlite_createdb(self):
+  def __init__(self, opt):
+    self.dbname = os.path.join(opt.workdir, 'sqlite.db')
+    if not os.path.exists(self.dbname):
+      self.create_db()
+    self.db = sqlite3.connect(self.dbname)
+
+  def createdb(self):
 
     with sqlite3.connect(self.dbname) as conn:
       c = conn.cursor()
       c.executescript("""
-create table in (
+create table amounts_in (
     contrid integer,
     date char(8),
-    time char(8),
+    hour integer,
     amount bigint,
-    primary key(contrid, date, time)
+    primary key(contrid, date, hour)
 );
 
-create table out (
+create table amounts_out (
     contrid integer,
     date char(8),
-    time char(8),
+    hour integer,
     amount bigint,
-    primary key(contrid, date, time)
+    primary key(contrid, date, hour)
 );
-
-create index contrid_idx on in (contrid);
-create index contrid_idx on out (contrid);
 
 create table fixeddays (
     date char(8)
 );
             """)
+
+  def date_is_fixed(self, date):
+    """Check if all data for specified date is cached and fixed."""
+    with self.db.cursor() as c:
+      c.
+
+  def update_data(self, data):
+    """Update database with specified data."""
+    raise NotImplemented()
+
+  def fix_date(self, date):
+    """Mark cached data for specified date as fixed."""
+    raise NotImplemented()
+
+  def get_amounts(self, contrid, date, hours):
+    """Return cached traffic amounts for specified date split and specified hours."""
+    raise NotImplemented()
 
 
 # vim: set ts=2 sw=2:

@@ -56,14 +56,8 @@ class UTM5Client(object):
   def __init__(self, opt):
     self.url = opt.url.strip('/')
 
-    begin, end = [ int(i) for i in opt.hours.split('-') ]
-
-    if begin < end:
-      self.night = list(range(begin, end))
-    else:
-      self.night = list(range(0, end) + range(begin, 24))
-
-    self.db = Storage(opt)
+    if opt.backend == 'sqlite':
+      self.db = SqliteStorage(opt)
 
   def auth(self, login, passwd):
     """
@@ -84,8 +78,6 @@ class UTM5Client(object):
     if not self.contracts:
       logging.error('Authentication failed! No contracts!')
       raise Exception('Authentication failed! No contracts!')
-
-    logging.info(self.contracts)
 
     self.set_contract(list(self.contracts)[0])
 
@@ -135,7 +127,7 @@ class UTM5Client(object):
 
     return data
 
-  def get_month_traffic(self, year, month=date.today().month, traffic_type="LLTRAF_INET"):
+  def get_month_traffic(self, year=date.today().year, month=date.today().month, traffic_type="LLTRAF_INET"):
 
     date = datetime.date(year, month, 1)
 
@@ -150,11 +142,11 @@ class UTM5Client(object):
         data = self.request_day_from_utm5(date)
         self.db.update_data(self.contrid, data)
         if date != datetime.today():
-          self.db.fixdate(date)
+          self.db.fix_date(date)
 
-      day_amounts = self.db.get_amounts(self.contrid, date)
+      date_amounts = self.db.get_amounts(self.contrid, date)
       for i in range(4):
-        amounts[i] += day_amounts[i]
+        amounts[i] += date_amounts[i]
 
       if date == datetime.today():
         break
@@ -164,22 +156,7 @@ class UTM5Client(object):
     return amounts
 
 
-def timer_func(_config, client):
-  client.verb('Calculate traffic ...\n')
-  traf_full = client.get_month_traffic()
-
-  (traf_fullin, traf_fullout) = (str(traf_full[0]), str(traf_full[1]))
-  out = "All: Input  = {0} bytes\nAll: Output = {1} bytes\n"
-  out = out.format(traf_fullin, traf_fullout)
-
-  client.verb(out)
-  conky = os.path.join(_config['usrhome'], 'utm5.conky')
-  open(conky, 'w').write("%s / %s\n" %(str(traf_fullin), str(traf_fullout)))
-
-  return out
-
-
-def utm5client_main():
+if __name__ == '__main__':
   from optparse import OptionParser
   parser = OptionParser(usage='Usage: %prog [options]', version='0.1.1')
   parser.add_option('-u', '--url', dest='url',
@@ -217,15 +194,19 @@ def utm5client_main():
   if opt.passwd is None:
     opt.passwd = getpass('Password:')
 
+  begin, end = [ int(i) for i in opt.hours.split('-') ]
+
+  if begin < end:
+    opt.night = list(range(begin, end))
+  else:
+    opt.night = list(range(0, end) + range(begin, 24))
+
   client = UTM5Client(opt)
 
   if not os.path.exists(opt.workdir):
     os.mkdir(opt.workdir)
 
   client.auth(opt.login, opt.passwd)
-
-if __name__ == '__main__':
-  utm5client_main()
-  sys.exit(0)
+  sys.stdout.write(str(client.get_month_traffic()))
 
 # vim: set ts=2 sw=2:
