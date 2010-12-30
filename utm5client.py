@@ -1,6 +1,8 @@
 #! /usr/bin/env python3
 #
 #   Copyright (c) 2010-2011, Andrew Grigorev <andrew@ei-grad.ru>
+#   Copyright (c) 2010-2011, Valentin Novikov <thelannor.beless@gmail.com>
+#
 #   All rights reserved.
 #
 #   Redistribution and use in source and binary forms, with or without
