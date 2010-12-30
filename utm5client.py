@@ -268,10 +268,10 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
 
   if opt.login is None:
-    opt.login = input('Login:')
+    opt.login = input('Login: ')
 
   if opt.passwd is None:
-    opt.passwd = getpass('Password:')
+    opt.passwd = getpass()
 
   begin, end = [ int(i) for i in opt.night.split('-') ]
 
