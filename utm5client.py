@@ -39,7 +39,7 @@ from datetime import datetime, timedelta
 from getpass import getpass
 
 import logging
-logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(funcName)s: %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 from storage import SqliteStorage
 
@@ -129,9 +129,10 @@ class UTM5Client(object):
 
   def get_month_traffic(self, year=datetime.today().year, month=datetime.today().month, traffic_type="LLTRAF_INET"):
 
-    date = datetime(year, month, 1)
+    today = datetime.today().date()
+    date = datetime(year, month, 1).date()
 
-    if date > datetime.today():
+    if date > today:
       raise Exception(date.strftime("Нельзя узнать свою статистику за %B %Y"))
 
     daytime_amounts = [0, 0]
@@ -142,7 +143,7 @@ class UTM5Client(object):
       if not self.db.date_is_fixed(self.cid, date):
         data = self.request_day_from_utm5(date)
         self.db.update_data(self.cid, data)
-        if date != datetime.today():
+        if date != today:
           self.db.fix_date(self.cid, date)
 
       date_daytime_amounts = self.db.get_amounts(self.cid, date, self.hours)
@@ -153,12 +154,12 @@ class UTM5Client(object):
       full_amounts[0] += date_full_amounts[0]
       full_amounts[1] += date_full_amounts[1]
 
-      if date == datetime.today():
+      if date == today:
         break
       else:
         date += timedelta(days=1)
 
-    return sum(daytime_amounts), sum(full_amounts)
+    return daytime_amounts, full_amounts
 
 
 if __name__ == '__main__':
@@ -202,9 +203,14 @@ if __name__ == '__main__':
   begin, end = [ int(i) for i in opt.night.split('-') ]
 
   if begin < end:
-    opt.hours = list(range(begin, end))
+    night_hours = list(range(begin, end))
   else:
-    opt.hours = list(range(0, end) + range(begin, 24))
+    night_hours = list(range(0, end) + range(begin, 24))
+
+  # opt.hours - day hours
+  opt.hours = list(set(range(24)) - set(night_hours))
+
+  logging.info(opt.hours)
 
   if not os.path.exists(opt.workdir):
     os.mkdir(opt.workdir)
@@ -227,6 +233,8 @@ if __name__ == '__main__':
 
     return '%.2f%s' % (size, suf)
 
-  sys.stdout.write("Daytime: %s\nFull: %s\n" % (hum(daytime), hum(full)))
+  sys.stdout.write("\n")
+  sys.stdout.write("= In =\nDaytime: %s\nFull: %s\n\n" % (hum(daytime[0]), hum(full[0])))
+  sys.stdout.write("= Out =\nDaytime: %s\nFull: %s\n\n" % (hum(daytime[1]), hum(full[1])))
 
 # vim: set ts=2 sw=2:

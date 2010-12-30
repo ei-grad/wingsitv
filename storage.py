@@ -103,6 +103,7 @@ create table fixeddays (
 
   def date_is_fixed(self, cid, date):
     """Check if all data for specified date is cached and fixed."""
+    date = date.strftime('%d.%m.%y')
     with self.db:
       c = self.db.cursor()
       c.execute("select count(*) from fixeddays where cid = ? and date = ?", (cid, date))
@@ -120,6 +121,7 @@ create table fixeddays (
 
   def fix_date(self, cid, date):
     """Mark cached data for specified date as fixed."""
+    date = date.strftime('%d.%m.%y')
     with self.db:
       self.db.execute('insert or ignore into fixeddays values (?, ?)', (cid, date))
 
@@ -129,13 +131,13 @@ create table fixeddays (
     with self.db:
       c = self.db.cursor()
       c.execute('select sum(amount) from amounts_in where cid = ? and date = ? and hour in (' + ','.join(['?'] * len(hours)) +')', (cid, date) + tuple(hours))
-      sum1 = c.fetchone()[0] or 0
+      sum_in = c.fetchone()[0] or 0
       c.close()
       c = self.db.cursor()
       c.execute('select sum(amount) from amounts_out where cid = ? and date = ? and hour in (' + ','.join(['?'] * len(hours)) + ')', (cid, date) + tuple(hours))
-      sum2 = c.fetchone()[0] or 0
+      sum_out = c.fetchone()[0] or 0
       c.close()
 
-    return sum1, sum2
+    return sum_in, sum_out
 
 # vim: set ts=2 sw=2:
