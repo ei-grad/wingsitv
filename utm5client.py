@@ -210,8 +210,6 @@ if __name__ == '__main__':
   # opt.hours - day hours
   opt.hours = list(set(range(24)) - set(night_hours))
 
-  logging.info(opt.hours)
-
   if not os.path.exists(opt.workdir):
     os.mkdir(opt.workdir)
 
