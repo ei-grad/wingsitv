@@ -37,13 +37,85 @@ from urllib.request import urlopen
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
 from getpass import getpass
-
 import logging
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+import sqlite3
 
-from storage import SqliteStorage
 
-select_contract = lambda contracts: list(contracts)[0]
+DEFAULT_WORKDIR = os.path.expanduser(os.path.join('~', '.utm5client'))
+
+class Storage(object):
+
+  def __init__(self, workdir=DEFAULT_WORKDIR):
+    self.dbname = os.path.join(workdir, 'sqlite.db')
+    if not os.path.exists(self.dbname):
+      self.create_db()
+    self.db = sqlite3.connect(self.dbname)
+
+  def create_db(self):
+    with sqlite3.connect(self.dbname) as conn:
+      conn.executescript("""
+create table amounts_in (
+    cid integer,
+    date char(8),
+    hour integer,
+    amount bigint,
+    primary key(cid, date, hour)
+);
+
+create table amounts_out (
+    cid integer,
+    date char(8),
+    hour integer,
+    amount bigint,
+    primary key(cid, date, hour)
+);
+
+create table fixeddays (
+    cid integer,
+    date char(8),
+    primary key(cid, date)
+);
+            """)
+
+  def date_is_fixed(self, cid, date):
+    """Check if all data for specified date is cached and fixed."""
+    date = date.strftime('%d.%m.%y')
+    with self.db:
+      c = self.db.cursor()
+      c.execute("select count(*) from fixeddays where cid = ? and date = ?", (cid, date))
+      return c.fetchone()[0] == 1
+
+  def update_data(self, cid, data):
+    """Update database with specified data."""
+    with self.db:
+        self.db.executemany('insert or replace into amounts_in values (?, ?, ?, ?)', [
+            (cid, d[1], d[2], d[3]) for d in data if d[0] == 'in'
+          ])
+        self.db.executemany('insert or replace into amounts_out values (?, ?, ?, ?)', [
+            (cid, d[1], d[2], d[3]) for d in data if d[0] == 'out'
+          ])
+
+  def fix_date(self, cid, date):
+    """Mark cached data for specified date as fixed."""
+    date = date.strftime('%d.%m.%y')
+    with self.db:
+      self.db.execute('insert or ignore into fixeddays values (?, ?)', (cid, date))
+
+  def get_amounts(self, cid, date, hours):
+    """Return cached traffic amounts for specified date split and specified hours."""
+    date = date.strftime('%d.%m.%y')
+    with self.db:
+      c = self.db.cursor()
+      c.execute('select sum(amount) from amounts_in where cid = ? and date = ? and hour in (' + ','.join(['?'] * len(hours)) +')', (cid, date) + tuple(hours))
+      sum_in = c.fetchone()[0] or 0
+      c.close()
+      c = self.db.cursor()
+      c.execute('select sum(amount) from amounts_out where cid = ? and date = ? and hour in (' + ','.join(['?'] * len(hours)) + ')', (cid, date) + tuple(hours))
+      sum_out = c.fetchone()[0] or 0
+      c.close()
+
+    return sum_in, sum_out
+
 
 class UTM5Client(object):
 
@@ -52,12 +124,10 @@ class UTM5Client(object):
   contracts_re = re.compile(r'''<A HREF="\?FORMNAME=IP_CONTRACT_INFO&SID=(?P<sid>\w+)&CONTR_ID=(?P<id>\d+)&NLS=WR" TITLE="Посмотреть данные по договору" target="_self" method="post">(?P<name>\w+)</A>
 &nbsp;<TD ALIGN=CENTER>&nbsp;(?P<client>[\w ]+)&nbsp;<TD ALIGN=RIGHT>&nbsp;\d+.\d\d&nbsp;<TD ALIGN=RIGHT>&nbsp;\d+.\d\d&nbsp;''', re.MULTILINE)
 
-  def __init__(self, opt):
-    self.url = opt.url.strip('/')
-    self.hours = opt.hours
-
-    if opt.backend == 'sqlite3':
-      self.db = SqliteStorage(opt)
+  def __init__(self, url, hours, workdir=DEFAULT_WORKDIR):
+    self.url = url.strip('/')
+    self.hours = hours
+    self.db = Storage(workdir)
 
   def auth(self, login, passwd):
     """
@@ -176,7 +246,7 @@ if __name__ == '__main__':
       default=False)
   parser.add_option('-w', '--workdir', dest='workdir',
       help='рабочая директория программы',
-      default=os.path.expanduser(os.path.join('~', '.utm5client')))
+      default=DEFAULT_WORKDIR)
   parser.add_option('-l', '--login', dest='login', metavar='LOGIN',
       help='логин от личного кабинета',
       default=None)
@@ -186,13 +256,14 @@ if __name__ == '__main__':
   parser.add_option('-n', '--night', dest='night', metavar='N-M',
       help='ночное время (по умолчанию: %default)',
       default='01-10')
-  parser.add_option('-r', '--refresh', dest='delay', metavar='DELAY',
-      help='интервал обновления информации',
-      default=300)
-  parser.add_option('-b', '--backend', dest='backend', metavar='',
-      help='бэкэнд хранения данных, sqlite или plaintext',
-      default='sqlite3')
   opt, args = parser.parse_args()
+
+  if opt.debug:
+    logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+  elif opt.verbose:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+  else:
+    logging.basicConfig(level=logging.WARNING, format="%(message)s")
 
   if opt.login is None:
     opt.login = input('Login:')
@@ -207,13 +278,12 @@ if __name__ == '__main__':
   else:
     night_hours = list(range(0, end) + range(begin, 24))
 
-  # opt.hours - day hours
-  opt.hours = list(set(range(24)) - set(night_hours))
+  dayhours = list(set(range(24)) - set(night_hours))
 
   if not os.path.exists(opt.workdir):
     os.mkdir(opt.workdir)
 
-  client = UTM5Client(opt)
+  client = UTM5Client(opt.url, dayhours, opt.workdir)
   client.auth(opt.login, opt.passwd)
   daytime, full = client.get_month_traffic()
 
