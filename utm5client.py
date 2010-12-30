@@ -35,14 +35,13 @@ __all__ = [ 'UTM5Client' ]
 import re, sys, os, atexit, getpass
 from urllib.request import urlopen
 from urllib.parse import urlencode
-from datetime import date
+from datetime import datetime, timedelta
 from getpass import getpass
-import datetime
 
 import logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s - %(funcName)s: %(message)s")
 
-from storage import Storage
+from storage import SqliteStorage
 
 select_contract = lambda contracts: list(contracts)[0]
 
@@ -55,8 +54,9 @@ class UTM5Client(object):
 
   def __init__(self, opt):
     self.url = opt.url.strip('/')
+    self.hours = opt.hours
 
-    if opt.backend == 'sqlite':
+    if opt.backend == 'sqlite3':
       self.db = SqliteStorage(opt)
 
   def auth(self, login, passwd):
@@ -81,9 +81,9 @@ class UTM5Client(object):
 
     self.set_contract(list(self.contracts)[0])
 
-  def set_contract(self, contrid):
-    self.sid = self.contracts[str(contrid)]['sid']
-    self.contractid = contrid
+  def set_contract(self, cid):
+    self.sid = self.contracts[str(cid)]['sid']
+    self.cid = cid
 
   def request_day_from_utm5(self, date, traffic_type="LLTRAF_INET"):
     """
@@ -97,14 +97,14 @@ class UTM5Client(object):
             LLTRAF_LOC - local
     """
 
-    logging.info('Requesting {0} from UTM5'.format(date.isoformat()))
+    logging.info('Requesting %d.%d.%d from UTM5' % date.timetuple()[:3])
 
     month = '%.2d.%d' % (date.month, date.year)
     day = date.day
 
     res = urlopen(self.url+'/!w3_p_main.showform',
       data=urlencode({
-                'CONTRACTID': self.contractid,
+                'CONTRACTID': self.cid,
                 "DIR": "",
                 "SRV": traffic_type,
                 "MONTH": month,
@@ -120,40 +120,45 @@ class UTM5Client(object):
 
     for e in self.traffic_re.finditer(res):
       direction = "in" if e.group('direction') == "<" else "out"
-      amount = e.group('amount')
-      time = e.group('time') or '00:00:00'
       date = e.group('date')
-      data.append((date, time, direction, amount))
+      time = int((e.group('time') or '00:00:00')[:2])
+      amount = e.group('amount')
+      data.append((direction, date, time, amount))
 
     return data
 
-  def get_month_traffic(self, year=date.today().year, month=date.today().month, traffic_type="LLTRAF_INET"):
+  def get_month_traffic(self, year=datetime.today().year, month=datetime.today().month, traffic_type="LLTRAF_INET"):
 
-    date = datetime.date(year, month, 1)
+    date = datetime(year, month, 1)
 
-    if date > date.today():
+    if date > datetime.today():
       raise Exception(date.strftime("Нельзя узнать свою статистику за %B %Y"))
 
-    amounts = [0]*4
+    daytime_amounts = [0, 0]
+    full_amounts = [0, 0]
 
     while date.month == month:
 
-      if not self.db.date_is_fixed(contrid, date):
+      if not self.db.date_is_fixed(self.cid, date):
         data = self.request_day_from_utm5(date)
-        self.db.update_data(self.contrid, data)
+        self.db.update_data(self.cid, data)
         if date != datetime.today():
-          self.db.fix_date(date)
+          self.db.fix_date(self.cid, date)
 
-      date_amounts = self.db.get_amounts(self.contrid, date)
-      for i in range(4):
-        amounts[i] += date_amounts[i]
+      date_daytime_amounts = self.db.get_amounts(self.cid, date, self.hours)
+      daytime_amounts[0] += date_daytime_amounts[0]
+      daytime_amounts[1] += date_daytime_amounts[1]
+
+      date_full_amounts = self.db.get_amounts(self.cid, date, list(range(24)))
+      full_amounts[0] += date_full_amounts[0]
+      full_amounts[1] += date_full_amounts[1]
 
       if date == datetime.today():
         break
       else:
         date += timedelta(days=1)
 
-    return amounts
+    return sum(daytime_amounts), sum(full_amounts)
 
 
 if __name__ == '__main__':
@@ -177,7 +182,7 @@ if __name__ == '__main__':
   parser.add_option('-p', '--passw', dest='passwd', metavar='PASSWORD',
       help='пароль от личного кабинета',
       default=None)
-  parser.add_option('-n', '--night', dest='hours', metavar='N-M',
+  parser.add_option('-n', '--night', dest='night', metavar='N-M',
       help='ночное время (по умолчанию: %default)',
       default='01-10')
   parser.add_option('-r', '--refresh', dest='delay', metavar='DELAY',
@@ -194,19 +199,35 @@ if __name__ == '__main__':
   if opt.passwd is None:
     opt.passwd = getpass('Password:')
 
-  begin, end = [ int(i) for i in opt.hours.split('-') ]
+  begin, end = [ int(i) for i in opt.night.split('-') ]
 
   if begin < end:
-    opt.night = list(range(begin, end))
+    opt.hours = list(range(begin, end))
   else:
-    opt.night = list(range(0, end) + range(begin, 24))
-
-  client = UTM5Client(opt)
+    opt.hours = list(range(0, end) + range(begin, 24))
 
   if not os.path.exists(opt.workdir):
     os.mkdir(opt.workdir)
 
+  client = UTM5Client(opt)
   client.auth(opt.login, opt.passwd)
-  sys.stdout.write(str(client.get_month_traffic()))
+  daytime, full = client.get_month_traffic()
+
+
+  def hum(size):
+    SUFFIXES = ['KB', 'MB', 'GB']
+
+    suf = 'B'
+
+    for suffix in SUFFIXES:
+      if size < 1024:
+        break
+      else:
+        size /= 1024
+        suf = suffix
+
+    return '%.2d%s' % (size, suf)
+
+  sys.stdout.write("Daytime: %s\nFull: %s\n" % (hum(daytime), hum(full)))
 
 # vim: set ts=2 sw=2:

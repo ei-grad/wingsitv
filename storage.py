@@ -45,23 +45,23 @@ class Storage(object):
   def __init__(self, opt):
     pass
 
-  def createdb(self):
+  def create_db(self):
     """Create or erase database."""
     raise NotImplemented()
 
-  def date_is_fixed(self, date):
+  def date_is_fixed(self, cid, date):
     """Check if all data for specified date is cached and fixed."""
     raise NotImplemented()
 
-  def update_data(self, data):
+  def update_data(self, cid, data):
     """Update database with specified data."""
     raise NotImplemented()
 
-  def fix_date(self, date):
+  def fix_date(self, cid, date):
     """Mark cached data for specified date as fixed."""
     raise NotImplemented()
 
-  def get_amounts(self, contrid, date, hours):
+  def get_amounts(self, cid, date, hours):
     """Return cached traffic amounts for specified date split and specified hours."""
     raise NotImplemented()
 
@@ -74,48 +74,68 @@ class SqliteStorage(Storage):
       self.create_db()
     self.db = sqlite3.connect(self.dbname)
 
-  def createdb(self):
-
+  def create_db(self):
+    sys.stderr.write("%s\n" % self.dbname)
     with sqlite3.connect(self.dbname) as conn:
-      c = conn.cursor()
-      c.executescript("""
+      conn.executescript("""
 create table amounts_in (
-    contrid integer,
+    cid integer,
     date char(8),
     hour integer,
     amount bigint,
-    primary key(contrid, date, hour)
+    primary key(cid, date, hour)
 );
 
 create table amounts_out (
-    contrid integer,
+    cid integer,
     date char(8),
     hour integer,
     amount bigint,
-    primary key(contrid, date, hour)
+    primary key(cid, date, hour)
 );
 
 create table fixeddays (
-    date char(8)
+    cid integer,
+    date char(8),
+    primary key(cid, date)
 );
             """)
 
-  def date_is_fixed(self, date):
+  def date_is_fixed(self, cid, date):
     """Check if all data for specified date is cached and fixed."""
-    with self.db.cursor() as c:
-      c.
+    with self.db:
+      c = self.db.cursor()
+      c.execute("select count(*) from fixeddays where cid = ? and date = ?", (cid, date))
+      return c.fetchone()[0] == 1
 
-  def update_data(self, data):
+  def update_data(self, cid, data):
     """Update database with specified data."""
-    raise NotImplemented()
+    with self.db:
+        self.db.executemany('insert or replace into amounts_in values (?, ?, ?, ?)', [
+            (cid, d[1], d[2], d[3]) for d in data if d[0] == 'in'
+          ])
+        self.db.executemany('insert or replace into amounts_out values (?, ?, ?, ?)', [
+            (cid, d[1], d[2], d[3]) for d in data if d[0] == 'out'
+          ])
 
-  def fix_date(self, date):
+  def fix_date(self, cid, date):
     """Mark cached data for specified date as fixed."""
-    raise NotImplemented()
+    with self.db:
+      self.db.execute('insert or ignore into fixeddays values (?, ?)', (cid, date))
 
-  def get_amounts(self, contrid, date, hours):
+  def get_amounts(self, cid, date, hours):
     """Return cached traffic amounts for specified date split and specified hours."""
-    raise NotImplemented()
+    date = date.strftime('%d.%m.%y')
+    with self.db:
+      c = self.db.cursor()
+      c.execute('select sum(amount) from amounts_in where cid = ? and date = ? and hour in (' + ','.join(['?'] * len(hours)) +')', (cid, date) + tuple(hours))
+      sum1 = c.fetchone()[0] or 0
+      c.close()
+      c = self.db.cursor()
+      c.execute('select sum(amount) from amounts_out where cid = ? and date = ? and hour in (' + ','.join(['?'] * len(hours)) + ')', (cid, date) + tuple(hours))
+      sum2 = c.fetchone()[0] or 0
+      c.close()
 
+    return sum1, sum2
 
 # vim: set ts=2 sw=2:
