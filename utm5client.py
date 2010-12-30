@@ -213,7 +213,6 @@ if __name__ == '__main__':
   client.auth(opt.login, opt.passwd)
   daytime, full = client.get_month_traffic()
 
-
   def hum(size):
     SUFFIXES = ['KB', 'MB', 'GB']
 
@@ -226,7 +225,7 @@ if __name__ == '__main__':
         size /= 1024
         suf = suffix
 
-    return '%.2d%s' % (size, suf)
+    return '%.2f%s' % (size, suf)
 
   sys.stdout.write("Daytime: %s\nFull: %s\n" % (hum(daytime), hum(full)))
 
