@@ -73,18 +73,16 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.stderr.write(using)
 
-    locale.setlocale(locale.LC_ALL, locale.getdefaultlocale())
-
     TEMPDIR = sys.argv[1]
     FPS = 3
-    FONT = ImageFont.truetype(os.popen("fc-list '' file | grep -i mono").readline().strip(': \n'), 24)
+    FONT = ImageFont.truetype(os.popen("fc-list '' file | grep -i mono | grep -iv oblique").readline().strip(': \n'), 24)
 
     if not os.path.exists(TEMPDIR):
         os.mkdir(TEMPDIR)
 
-
     from daemon import DaemonContext
     with DaemonContext():
+        locale.setlocale(locale.LC_ALL, locale.getdefaultlocale())
         logging.basicConfig(filename='/var/log/camdaemon.log', level=logging.INFO,
             format="%(asctime)s - %(levelname)s - %(funcName)s: %(message)s")
         wcd(TEMPDIR, FPS, FONT)
