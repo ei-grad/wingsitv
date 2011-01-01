@@ -36,7 +36,7 @@ ls *.jpg >list.txt
 
 
 d=`date +%H`
-s=`date -d "$d" +%s`
+s=$((`date -d "$d" +%s` - 3600))
 h=`python -c "from datetime import datetime; print(datetime.fromtimestamp($s).timetuple()[3])"`
 
 vout_dir="$2/"`python -c "from datetime import date; print('/'.join(map(str, date.fromtimestamp($s).timetuple()[:3])))"`
