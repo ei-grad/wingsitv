@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+# coding: utf-8
 #
 #   Copyright (c) 2010-2011, Andrew Grigorev <andrew@ei-grad.ru>
 #   Copyright (c) 2010-2011, Valentin Novikov <thelannor.beless@gmail.com>
@@ -137,13 +138,13 @@ class UTM5Client(object):
     """
     logging.info('Authenticating as {0}...'.format(login))
     res = urlopen(self.url+'/!w3_p_main.showform',
-      data=urlencode({'SID': '',
+      data=bytes(urlencode({'SID': '',
                     'NLS': 'WR',
                     'USERNAME': login,
                     'PASSWORD': passwd,
                     'FORMNAME': 'IP_CONTRACTS',
                     'BUTTON': 'Вход'.encode('cp1251')
-                    })).read().decode('cp1251')
+                    }), 'cp1251')).read().decode('cp1251')
 
     self.contracts = {c.group('id'): c.groupdict() for c in self.contracts_re.finditer(res)}
 
@@ -152,6 +153,7 @@ class UTM5Client(object):
       raise Exception('Authentication failed! No contracts!')
 
     self.set_contract(list(self.contracts)[0])
+    logging.info('Authenticated, using contract %s' % self.cid)
 
   def set_contract(self, cid):
     self.sid = self.contracts[str(cid)]['sid']
@@ -175,7 +177,7 @@ class UTM5Client(object):
     day = date.day
 
     res = urlopen(self.url+'/!w3_p_main.showform',
-      data=urlencode({
+      data=bytes(urlencode({
                 'CONTRACTID': self.cid,
                 "DIR": "",
                 "SRV": traffic_type,
@@ -186,7 +188,7 @@ class UTM5Client(object):
                 "NLS": "WR",
                 "FORMNAME": "LL_TRAFFIC2",
                 "BUTTON": 'Показать'.encode('cp1251')
-               })).read().decode('cp1251')
+               }), 'cp1251')).read().decode('cp1251')
 
     data = []
 
@@ -244,7 +246,7 @@ if __name__ == '__main__':
       help='вывод отладочных сообщений',
       default=False)
   parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
-      help='подробный вывод сообщений',
+      help='вывод информационных сообщений',
       default=False)
   parser.add_option('-w', '--workdir', dest='workdir',
       help='рабочая директория программы',
