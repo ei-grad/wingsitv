@@ -136,7 +136,7 @@ class UTM5Client(object):
     """
       Authenticates and retrieves a list of available contracts.
     """
-    logging.info('Authenticating as {0}...'.format(login))
+    logging.info('Authenticating as "{0}"'.format(login))
     res = urlopen(self.url+'/!w3_p_main.showform',
       data=bytes(urlencode({'SID': '',
                     'NLS': 'WR',
@@ -260,6 +260,10 @@ if __name__ == '__main__':
   parser.add_option('-n', '--night', dest='night', metavar='N-M',
       help='ночное время (по умолчанию: %default)',
       default='01-10')
+  parser.add_option('-c', '--ignore-config', action='store_true',
+      dest='ignore_cfg',
+      help='игнорировать сохраненные логин и пароль',
+      default=False)
   opt, args = parser.parse_args()
 
   if opt.debug:
@@ -268,6 +272,22 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format="%(message)s")
   else:
     logging.basicConfig(level=logging.WARNING, format="%(message)s")
+
+  logging.debug('%s %s\n\n== Args ==\n%s\n\n== Opts ==\n%s\n\n' % (os.path.basename(sys.argv[0]), parser.get_version(), args, "\n".join([': '.join(map(str, i)) for i in opt.__dict__.items()])))
+
+  if opt.login is None and len(args) == 1:
+    opt.login = args[0]
+
+  from configparser import RawConfigParser
+  config = RawConfigParser()
+  configfile = os.path.join(opt.workdir, 'config.ini')
+  if os.path.exists(configfile):
+    config.read(configfile)
+  else:
+    config['default'] = {'login': None, 'passwd': None}
+  if opt.ignore_cfg == False and opt.login is None:
+      opt.login = config['default']['login']
+      opt.passwd = config['default']['passwd']
 
   if opt.login is None:
     opt.login = input('Login: ')
@@ -288,11 +308,23 @@ if __name__ == '__main__':
     os.mkdir(opt.workdir)
 
   client = UTM5Client(opt.url, dayhours, opt.workdir)
-  client.auth(opt.login, opt.passwd)
+
+  try:
+    client.auth(opt.login, opt.passwd)
+  except Exception as e:
+    sys.exit(1)
+
+  if config['default']['login'] != opt.login or \
+      config['default']['passwd'] != opt.passwd:
+    config['default']['login'] = opt.login
+    config['default']['passwd'] = opt.passwd
+    with open(configfile, 'w') as f:
+      config.write(f)
+
   daytime, full = client.get_month_traffic()
 
   def hum(size):
-    return '%.2fMiB' % (float(size)/(2**20),)
+    return '%.2f MiB' % (float(size)/(2**20),)
 
   sys.stdout.write("Daytime (in/out):\t%s / %s\n" % (hum(daytime[0]), hum(daytime[1])))
   sys.stdout.write("Full (in/out):\t\t%s / %s\n" % (hum(full[0]), hum(full[1])))
