@@ -238,7 +238,7 @@ class UTM5Client(object):
 
 if __name__ == '__main__':
   from optparse import OptionParser
-  parser = OptionParser(usage='Usage: %prog [options]', version='0.1.1')
+  parser = OptionParser(usage='Usage: %prog [options]', version='0.2.0')
   parser.add_option('-u', '--url', dest='url',
       help='адрес системы UTM5',
       default='https://mnx.net.ru/utm5')
