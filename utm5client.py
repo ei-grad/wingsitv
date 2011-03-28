@@ -292,21 +292,10 @@ if __name__ == '__main__':
   daytime, full = client.get_month_traffic()
 
   def hum(size):
-    SUFFIXES = ['KB', 'MB', 'GB']
+    return '%.2fMiB' % (float(size)/(2**20),)
 
-    suf = 'B'
-
-    for suffix in SUFFIXES:
-      if size < 1024:
-        break
-      else:
-        size /= 1024
-        suf = suffix
-
-    return '%.2f%s' % (size, suf)
-
-  sys.stdout.write("\n")
-  sys.stdout.write("= In =\nDaytime: %s\nFull: %s\n\n" % (hum(daytime[0]), hum(full[0])))
-  sys.stdout.write("= Out =\nDaytime: %s\nFull: %s\n\n" % (hum(daytime[1]), hum(full[1])))
+  sys.stdout.write("Daytime (in/out):\t%s / %s\n" % (hum(daytime[0]), hum(daytime[1])))
+  sys.stdout.write("Full (in/out):\t\t%s / %s\n" % (hum(full[0]), hum(full[1])))
 
 # vim: set ts=2 sw=2:
+
