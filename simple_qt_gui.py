@@ -29,7 +29,7 @@ class QUtm5Gui(QtGui.QApplication):
                     'show_traffic': False
                 }
 
-        self.chat = QWingsChat()
+        self.chat = QWingsChat(app=self)
         if config['qutm5client']['show_chat'] == "True":
             self.chat.show()
 
@@ -57,7 +57,8 @@ class QUtm5Gui(QtGui.QApplication):
 
         self.update_tooltip_timer = QtCore.QTimer()
         self.update_tooltip_timer.singleShot(0, self.update_tooltip)
-        QtCore.QObject.connect(self.update_tooltip_timer, QtCore.SIGNAL("timeout()"), self.update_tooltip)
+        QtCore.QObject.connect(self.update_tooltip_timer,
+                QtCore.SIGNAL("timeout()"), self.update_tooltip)
         self.update_tooltip_timer.start(1000*60*5) # 5 minutes
 
     def login_dialog(self):

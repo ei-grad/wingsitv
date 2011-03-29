@@ -2,54 +2,109 @@
 # coding: utf-8
 
 
+from PyQt4.QtCore import Qt
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtWebKit import QWebView
 
+from utm5client import config, save_config, DEFAULT_WORKDIR
 from wingschat import *
 
 
+class QWingsChatLineEdit(QtGui.QLineEdit):
+
+
+    def __init__(self, login, parent=None):
+        super(QWingsChatLineEdit, self).__init__(parent)
+        self.parent = parent
+        self.history = []
+        self.history_index = 0
+        self.login = login
+
+    def keyPressEvent(self, event):
+
+        msg = self.text()
+        key = event.key()
+
+        if key == Qt.Key_Up:
+            if self.history_index < len(self.history) -1:
+                self.history_index += 1
+                self.setText(self.history[self.history_index])
+                event.accept()
+            else:
+                event.ignore()
+        elif key == Qt.Key_Down:
+            if self.history_index > 0:
+                self.history_index -= 1
+                self.setText(self.history[self.history_index])
+                event.accept()
+            else:
+                event.ignore()
+        elif key == Qt.Key_Return:
+            send_message(self.login, msg)
+            self.history_index = len(self.history)
+            self.history.append(msg)
+            self.clear()
+            event.accept()
+        else:
+            super(QWingsChatLineEdit, self).keyPressEvent(event)
+
 class QWingsChat(QtGui.QWidget):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, app=None):
 
         super(QWingsChat, self).__init__(parent)
 
-        self.setGeometry(300, 300, 250, 150)
-        self.setWindowTitle('КрыльяITV')
+        self.app = app
+
+        self.setWindowTitle('КрыльяITV :: Чат')
 
         self.parser = ChatMsgParser()
         self.template = open('chattemplate.html').read()
 
-        self.messages = QWebView()
-        self.post_input = QtGui.QLineEdit()
-        self.post_button = QtGui.QPushButton("Отправить")
-        self.userlist = QtGui.QListView()
+        if 'chat' not in config:
+            while True:
+                login, ok = QtGui.QInputDialog.getText(self, 'Вход', 'Выберите имя:')
+                if ok:
+                    break
+            config['chat'] = {'login': login}
+            save_config()
+        else:
+            login = config['chat']['login']
 
-        wr = QtGui.QHBoxLayout()
+        self.chat = QWebView()
+        self.message = QWingsChatLineEdit(login)
+
         vb = QtGui.QVBoxLayout()
-        wr.addLayout(vb)
-        wr.addWidget(self.userlist)
+        vb.addWidget(self.chat)
+        vb.addWidget(self.message)
+        self.setLayout(vb)
 
-        vb.addWidget(self.messages)
+        self.parser.parse(get_messages())
 
-        hb = QtGui.QHBoxLayout()
-        hb.addWidget(self.post_input)
-        hb.addWidget(self.post_button)
-
-        vb.addLayout(hb)
-
-        self.setLayout(wr)
+        self.chat.setHtml(self.template % "\n".join([ self.format_msg(msg)
+            for msg in self.parser.msgs ]))
 
         self.timer = QtCore.QTimer()
-        self.timer.singleShot(0, self.update_chat)
-        QtCore.QObject.connect(self.timer, QtCore.SIGNAL("timeout()"), self.update_chat)
+        QtCore.QObject.connect(self.timer, QtCore.SIGNAL("timeout()"),
+                self.update_chat)
         self.timer.start(1000)
 
-        self.show()
+    def format_msg(self, msg):
+        return "<li>({}) {}: {}</li>".format(msg['datetime'].time(),
+                msg['nickname'], msg['message'])
 
     def update_chat(self):
-        self.parser.parse(get_messages())
-        self.template = open('chattemplate.html').read()
-        self.messages.setHtml(self.template % "\n".join([ "<tr><td>{}</td><td class='nick'>{}:</td><td>{}</td></tr>".format(d['datetime'].time(), d['nickname'], d['message']) for d in self.parser.msgs ]))
+        for msg in self.parser.parse(get_messages()):
+            self.chat.page().mainFrame().findFirstElement("ul").appendInside(
+                    self.format_msg(msg))
+
+
+    def closeEvent(self, event):
+        if self.app is not None:
+            self.app.toggle_chat()
+            #self.hide()
+            event.ignore()
+        else:
+            super(QWingsChat, self).closeEvent(event)
 

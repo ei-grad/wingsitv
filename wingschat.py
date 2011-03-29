@@ -4,7 +4,8 @@
 from urllib.request import urlopen
 from urllib.parse import urlencode
 from random import randint
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 
 def send_message(nick, message, uid=2303):
     urlopen('http://torrent.mnx.net.ru/ajaxchat/sendChatData.php',
@@ -21,7 +22,7 @@ class ChatMsgParser(object):
     def __init__(self):
         #super(ChatMsgParser, self).__init__(*args, **kwargs)
 
-        self.ids = set()
+        self.last_id = 0
         self.msgs = []
 
     def parse(self, text):
@@ -32,18 +33,20 @@ class ChatMsgParser(object):
         for raw in raw_msgs:
             p = raw.find("# ") + 2
             msg_id = int(raw[p:raw.find('</div>', p)])
-            if msg_id in self.ids:
+            if msg_id <= self.last_id:
                 continue
-            self.ids.add(msg_id)
             msg = {}
             msg['id'] = msg_id
-            msg['datetime'] = datetime.strptime(raw[19:38],'%d/%m/%Y %H:%M:%S')
+            msg['datetime'] = datetime.strptime(raw[19:38],'%d/%m/%Y %H:%M:%S') - timedelta(seconds=time.timezone)
             msg['nickname'] = raw[raw.find('>', 79)+1:raw.find('</a>', 79)]
             s = "<div class='chatoutput'>"
             p = raw.find(s, p) + len(s)
             msg['message'] = raw[p:raw.find("</div>", p)]
-            self.msgs.insert(0, msg)
             new_msgs.insert(0, msg)
+
+        if new_msgs:
+            self.last_id = new_msgs[-1]['id']
+            self.msgs += new_msgs
 
         return new_msgs
 

@@ -3,22 +3,32 @@
     <head>
         <style type="text/css" media="all">
 body {
-    background: black;
-    color: white;
+/*    background: black;
+    color: white;*/
     font-family: Monospace;
+    padding: 0;
+    margin: 0;
 }
-tr {
-    vertical-align: bottom;
+ul {
+    padding: 0.5em;
+    margin: 0;
 }
-.nick {
-    text-align: right;
+li {
+    display: block;
+    padding: 0.25em;
 }
         </style>
+        <script language="javascript">
+            window.onload=function() {
+                location.href=location.href + '#bottom';
+            }
+        </script>
     </head>
     <body>
-        <table>
+        <ul id="messages">
             %s
-        </table>
+        </ul>
+        <a name="bottom"></a>
     </body>
 </html>
 
