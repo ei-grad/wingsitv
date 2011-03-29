@@ -254,7 +254,7 @@ if __name__ == '__main__':
   parser.add_option('-l', '--login', dest='login', metavar='LOGIN',
       help='логин от личного кабинета',
       default=None)
-  parser.add_option('-p', '--passw', dest='passwd', metavar='PASSWORD',
+  parser.add_option('-p', '--passwd', dest='passwd', metavar='PASSWORD',
       help='пароль от личного кабинета',
       default=None)
   parser.add_option('-n', '--night', dest='night', metavar='N-M',
