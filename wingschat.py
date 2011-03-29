@@ -42,8 +42,8 @@ class ChatMsgParser(object):
             s = "<div class='chatoutput'>"
             p = raw.find(s, p) + len(s)
             msg['message'] = raw[p:raw.find("</div>", p)]
-            self.msgs.append(msg)
-            new_msgs.append(msg)
+            self.msgs.insert(0, msg)
+            new_msgs.insert(0, msg)
 
         return new_msgs
 
