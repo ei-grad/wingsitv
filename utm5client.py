@@ -44,6 +44,8 @@ import logging
 import sqlite3
 
 
+DEFAULT_URL = 'https://mnx.net.ru/utm5'
+DEFAULT_HOURS = '01-10'
 DEFAULT_WORKDIR = os.path.expanduser(os.path.join('~', '.utm5client'))
 
 class Storage(object):
@@ -127,10 +129,14 @@ class UTM5Client(object):
   contracts_re = re.compile(r'''<A HREF="\?FORMNAME=IP_CONTRACT_INFO&SID=(?P<sid>\w+)&CONTR_ID=(?P<id>\d+)&NLS=WR" TITLE="Посмотреть данные по договору" target="_self" method="post">(?P<name>\w+)</A>
 &nbsp;<TD ALIGN=CENTER>&nbsp;(?P<client>[\w ]+)&nbsp;<TD ALIGN=RIGHT>&nbsp;\d+.\d\d&nbsp;<TD ALIGN=RIGHT>&nbsp;\d+.\d\d&nbsp;''', re.MULTILINE)
 
-  def __init__(self, url, hours, workdir=DEFAULT_WORKDIR):
+  def __init__(self, url=DEFAULT_URL, hours=DEFAULT_HOURS, workdir=DEFAULT_WORKDIR, auto_auth=False):
+
     self.url = url.strip('/')
     self.hours = hours
     self.db = Storage(workdir)
+
+    if auto_auth:
+      self.auth(config['default']['login'], config['default']['passwd'])
 
   def auth(self, login, passwd):
     """
@@ -235,13 +241,20 @@ class UTM5Client(object):
 
     return daytime_amounts, full_amounts
 
+from configparser import RawConfigParser
+config = RawConfigParser()
+configfile = os.path.join(DEFAULT_WORKDIR, 'config.ini')
+if os.path.exists(configfile):
+  config.read(configfile)
+else:
+  config['default'] = {'login': None, 'passwd': None}
 
 if __name__ == '__main__':
   from optparse import OptionParser
   parser = OptionParser(usage='Usage: %prog [options]', version='0.2.0')
   parser.add_option('-u', '--url', dest='url',
       help='адрес системы UTM5',
-      default='https://mnx.net.ru/utm5')
+      default=DEFAULT_URL)
   parser.add_option('-d', '--debug', action='store_true', dest='debug',
       help='вывод отладочных сообщений',
       default=False)
@@ -259,7 +272,7 @@ if __name__ == '__main__':
       default=None)
   parser.add_option('-n', '--night', dest='night', metavar='N-M',
       help='ночное время (по умолчанию: %default)',
-      default='01-10')
+      default=DEFAULT_HOURS)
   parser.add_option('-c', '--ignore-config', action='store_true',
       dest='ignore_cfg',
       help='игнорировать сохраненные логин и пароль',
@@ -278,13 +291,6 @@ if __name__ == '__main__':
   if opt.login is None and len(args) == 1:
     opt.login = args[0]
 
-  from configparser import RawConfigParser
-  config = RawConfigParser()
-  configfile = os.path.join(opt.workdir, 'config.ini')
-  if os.path.exists(configfile):
-    config.read(configfile)
-  else:
-    config['default'] = {'login': None, 'passwd': None}
   if opt.ignore_cfg == False and opt.login is None:
       opt.login = config['default']['login']
       opt.passwd = config['default']['passwd']
