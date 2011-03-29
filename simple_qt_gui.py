@@ -55,7 +55,6 @@ class QUtm5Gui(QtGui.QApplication):
 
         self.trayIcon.setContextMenu(self.trayIconMenu)
 
-
         self.update_tooltip_timer = QtCore.QTimer()
         self.update_tooltip_timer.singleShot(0, self.update_tooltip)
         QtCore.QObject.connect(self.update_tooltip_timer, QtCore.SIGNAL("timeout()"), self.update_tooltip)
