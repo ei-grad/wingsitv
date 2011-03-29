@@ -36,7 +36,7 @@
 __all__ = [ 'UTM5Client', 'config', 'save_config' ]
 
 import re, sys, os, atexit, getpass
-from configparser import ConfigParser
+from configparser import RawConfigParser
 from optparse import OptionParser
 from urllib.request import urlopen
 from urllib.parse import urlencode
@@ -243,7 +243,7 @@ class UTM5Client(object):
 
     return daytime_amounts, full_amounts
 
-config = ConfigParser()
+config = RawConfigParser()
 configfile = os.path.join(DEFAULT_WORKDIR, 'config.ini')
 
 def save_config():
