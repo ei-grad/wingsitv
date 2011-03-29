@@ -30,8 +30,7 @@ class QUtm5Gui(QtGui.QApplication):
                 }
 
         self.chat = QWingsChat()
-        print(config['qutm5client']['show_chat'])
-        if config['qutm5client']['show_chat'].bool() == True:
+        if config['qutm5client']['show_chat'] == "True":
             self.chat.show()
 
         self.trayIcon = QtGui.QSystemTrayIcon()
