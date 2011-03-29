@@ -33,9 +33,11 @@
 #
 
 
-__all__ = [ 'UTM5Client' ]
+__all__ = [ 'UTM5Client', 'config', 'save_config' ]
 
 import re, sys, os, atexit, getpass
+from configparser import ConfigParser
+from optparse import OptionParser
 from urllib.request import urlopen
 from urllib.parse import urlencode
 from datetime import datetime, timedelta
@@ -136,7 +138,7 @@ class UTM5Client(object):
     self.db = Storage(workdir)
 
     if auto_auth:
-      self.auth(config['default']['login'], config['default']['passwd'])
+      self.auth(config['auth']['login'], config['auth']['passwd'])
 
   def auth(self, login, passwd):
     """
@@ -241,16 +243,18 @@ class UTM5Client(object):
 
     return daytime_amounts, full_amounts
 
-from configparser import RawConfigParser
-config = RawConfigParser()
+config = ConfigParser()
 configfile = os.path.join(DEFAULT_WORKDIR, 'config.ini')
+
+def save_config():
+  with open(configfile, 'w') as f: config.write(f)
+
 if os.path.exists(configfile):
   config.read(configfile)
-else:
-  config['default'] = {'login': None, 'passwd': None}
+if 'auth' not in config:
+  config['auth'] = {'login': None, 'passwd': None}
 
 if __name__ == '__main__':
-  from optparse import OptionParser
   parser = OptionParser(usage='Usage: %prog [options]', version='0.2.0')
   parser.add_option('-u', '--url', dest='url',
       help='адрес системы UTM5',
@@ -292,8 +296,8 @@ if __name__ == '__main__':
     opt.login = args[0]
 
   if opt.ignore_cfg == False and opt.login is None:
-      opt.login = config['default']['login']
-      opt.passwd = config['default']['passwd']
+      opt.login = config['auth']['login']
+      opt.passwd = config['auth']['passwd']
 
   if opt.login is None:
     opt.login = input('Login: ')
@@ -320,12 +324,11 @@ if __name__ == '__main__':
   except Exception as e:
     sys.exit(1)
 
-  if config['default']['login'] != opt.login or \
-      config['default']['passwd'] != opt.passwd:
-    config['default']['login'] = opt.login
-    config['default']['passwd'] = opt.passwd
-    with open(configfile, 'w') as f:
-      config.write(f)
+  if config['auth']['login'] != opt.login or \
+      config['auth']['passwd'] != opt.passwd:
+    config['auth']['login'] = opt.login
+    config['auth']['passwd'] = opt.passwd
+    save_config()
 
   daytime, full = client.get_month_traffic()
 
