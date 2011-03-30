@@ -123,7 +123,7 @@ class QWingsChat(QtGui.QWidget):
                             '<li>({}) Подключение восстановлено.</li>'.format(
                                 datetime.now().time().strftime("%H:%M:%S")))
                 self.error = 0
-        except URLError:
+        except:
             self.error += 1
             if self.error == 5:
                 mf.findFirstElement("ul").appendInside(
