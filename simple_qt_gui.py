@@ -7,7 +7,9 @@ from time import time
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 
-from utm5client import UTM5Client, config, save_config
+from settings import config, save_config
+
+from utm5client import UTM5Client
 from qwingschat import QWingsChat
 
 
@@ -16,21 +18,13 @@ class QUtm5Gui(QtGui.QApplication):
 
         super(QUtm5Gui, self).__init__(argv)
 
-        if 'auth' not in config or config['auth']['passwd'] is None:
+        if config['utm5']['login'] is None or config['utm5']['passwd'] is None:
             self.login_dialog()
-        self.utm5client = UTM5Client(auto_auth=True)
-        if 'auth' not in config or config['auth']['passwd'] is None:
-            self.login_dialog()
-        self.utm5client = UTM5Client(auto_auth=True)
 
-        if 'qutm5client' not in config:
-            config['qutm5client'] = {
-                    'show_chat': True,
-                    'show_traffic': False
-                }
+        self.utm5client = UTM5Client(auto_auth=True)
 
         self.chat = QWingsChat(app=self)
-        if config['qutm5client']['show_chat'] == "True":
+        if config['chat']['show'] == "True":
             self.chat.show()
 
         self.trayIcon = QtGui.QSystemTrayIcon()
@@ -62,7 +56,13 @@ class QUtm5Gui(QtGui.QApplication):
         self.update_tooltip_timer.start(1000*60*5) # 5 minutes
 
     def login_dialog(self):
-        raise NotImplementedError()
+        while True:
+            config['utm5']['login'], ok1 = QtGui.QInputDialog.getText(None,
+                   'Вход в личный кабинет', 'Введите логин:')
+            config['utm5']['passwd'], ok2 = QtGui.QInputDialog.getText(None,
+                   'Вход в личный кабинет', 'Введите пароль:')
+            if ok1 and ok2: break
+        save_config()
 
     def update_tooltip(self):
 
@@ -92,7 +92,7 @@ class QUtm5Gui(QtGui.QApplication):
 
     def toggle_chat(self):
         self.chat.setVisible(not self.chat.isVisible())
-        config['qutm5client']['show_chat'] = str(self.chat.isVisible())
+        config['chat']['show'] = str(self.chat.isVisible())
         save_config()
 
     def toggle_traffic(self):

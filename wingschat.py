@@ -3,6 +3,7 @@
 
 from urllib.request import urlopen
 from urllib.parse import urlencode
+from urllib.error import URLError
 from random import randint
 from datetime import datetime, timedelta
 import time
@@ -12,10 +13,11 @@ def send_message(nick, message, uid=2303):
             data=bytes(urlencode({
                 'n': nick,
                 'c': message,
-                'u': uid}), 'utf-8'))
+                'u': uid}), 'utf-8'),
+            timeout=5)
 
 def get_messages(lastid=-1):
-    return urlopen('http://torrent.mnx.net.ru/ajaxchat/getChatData.php?lastID=%d&rand=%d' % (lastid, randint(0, 1000000))).read().decode('utf-8')
+    return urlopen('http://torrent.mnx.net.ru/ajaxchat/getChatData.php?lastID=%d&rand=%d' % (lastid, randint(0, 1000000)), timeout=0.2).read().decode('utf-8')
 
 class ChatMsgParser(object):
 
