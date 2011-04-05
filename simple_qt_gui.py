@@ -28,7 +28,7 @@ class QUtm5Gui(QtGui.QApplication):
             self.chat.show()
 
         self.trayIcon = QtGui.QSystemTrayIcon()
-        self.trayIcon.setIcon(QtGui.QIcon('wings_logo.png'))
+        self.trayIcon.setIcon(QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'wings_logo.png')))
         self.trayIcon.setVisible(True)
         self.connect(self.trayIcon,
                 QtCore.SIGNAL("activated(QSystemTrayIcon::ActivationReason)"),

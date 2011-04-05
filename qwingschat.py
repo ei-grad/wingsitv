@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+import os
 from time import time
 from datetime import datetime
 from urllib.error import URLError
+from random import randint
+import socket
 
 from PyQt4.QtCore import Qt
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtWebKit import QWebView
+from PyQt4.QtNetwork import QHttp
 
 from settings import config, save_config
 
@@ -21,40 +25,39 @@ class QWingsChatLineEdit(QtGui.QLineEdit):
     def __init__(self, login, parent=None):
         super(QWingsChatLineEdit, self).__init__(parent)
         self.parent = parent
-        self.history = []
+        self.history = ['']
         self.history_index = 0
         self.login = login
 
     def keyPressEvent(self, event):
-
-        msg = self.text()
         key = event.key()
-
         if key == Qt.Key_Up:
-            if self.history_index < len(self.history) -1:
+            if self.history_index < len(self.history) - 1:
                 self.history_index += 1
                 self.setText(self.history[self.history_index])
-                event.accept()
-            else:
-                event.ignore()
+            event.accept()
         elif key == Qt.Key_Down:
             if self.history_index > 0:
                 self.history_index -= 1
                 self.setText(self.history[self.history_index])
-                event.accept()
-            else:
-                event.ignore()
+            event.accept()
         elif key == Qt.Key_Return:
             try:
-                send_message(self.login, msg)
-                self.history_index = len(self.history)
-                self.history.append(msg)
-                self.clear()
-            except:
+                msg = self.text()
+                if msg:
+                    send_message(self.login, msg)
+                    if len(self.history) == 1 or msg != self.history[1]:
+                        self.history[0] = msg
+                        self.history_index = 0
+                        self.history.insert(0, '')
+                    self.clear()
+            except socket.error:
                 QtGui.QMessageBox("Ошибка", "Не удалось отправить сообщение!").show()
             event.accept()
         else:
             super(QWingsChatLineEdit, self).keyPressEvent(event)
+            if self.history_index == 0:
+                self.history[0] = self.text()
 
 class QWingsChat(QtGui.QWidget):
 
@@ -66,9 +69,10 @@ class QWingsChat(QtGui.QWidget):
         self.error = 0
 
         self.setWindowTitle('КрыльяITV :: Чат')
+        self.setWindowIcon(QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'wings_logo.png')))
 
         self.parser = ChatMsgParser()
-        self.template = open('chattemplate.html').read()
+        self.template = open(os.path.join(os.path.dirname(__file__), 'chattemplate.html')).read()
 
         if config['chat']['login'] is None:
             while True:
@@ -84,7 +88,7 @@ class QWingsChat(QtGui.QWidget):
         self.message = QWingsChatLineEdit(login)
 
         vb = QtGui.QVBoxLayout()
-        vb.setMargin(5)
+        vb.setMargin(0)
         vb.setSpacing(0)
         vb.addWidget(self.chat)
         vb.addWidget(self.message)
@@ -92,11 +96,11 @@ class QWingsChat(QtGui.QWidget):
 
         self.chat.setHtml(self.template)
 
+        self.http = QHttp('torrent.mnx.net.ru')
+        self.connect(self.http, QtCore.SIGNAL("done(bool)"), self.update_chat)
+
         self.timer = QtCore.QTimer()
-        self.timer.singleShot(0, self.update_chat)
-        #QtCore.QObject.connect(self.timer, QtCore.SIGNAL("timeout()"),
-        #        self.update_chat)
-        #self.timer.start(1000)
+        self.timer.singleShot(0, self.send_update_request)
 
     def format_msg(self, msg):
         def get_color(nick):
@@ -111,25 +115,31 @@ class QWingsChat(QtGui.QWidget):
         return '<li>({}) <span style="color:{};">{}:</span> {}</li>'.format(msg['datetime'].time(),
                 get_color(msg['nickname']), msg['nickname'], msg['message'])
 
-    def update_chat(self):
-        mf = self.chat.page().mainFrame()
-        try:
-            for msg in self.parser.parse(get_messages()):
-                mf.findFirstElement("ul").appendInside(self.format_msg(msg))
-                mf.scrollToAnchor("bottom")
+    def send_update_request(self):
+        self.http.get('/ajaxchat/getChatData.php?lastID=-1&rand=%d' % randint(0, 1000000))
+
+    def update_chat(self, error):
+        data = str(self.http.readAll(), 'utf-8')
+        if not error:
+            mf = self.chat.page().mainFrame()
             if self.error > 0:
-                if self.error >= 5:
+                if self.error >= 30:
                     mf.findFirstElement("ul").appendInside(
-                            '<li>({}) Подключение восстановлено.</li>'.format(
+                            '<li style="color: gray;">({}) Подключение восстановлено.</li>'.format(
                                 datetime.now().time().strftime("%H:%M:%S")))
                 self.error = 0
-        except:
+            msgs = self.parser.parse(data)
+            for msg in msgs:
+                mf.findFirstElement("ul").appendInside(self.format_msg(msg))
+                mf.scrollToAnchor("bottom")
+
+        else:
             self.error += 1
-            if self.error == 5:
+            if self.error == 30:
                 mf.findFirstElement("ul").appendInside(
-                        '<li>({}) Проблема с подключением.</li>'.format(
+                        '<li style="color: gray;">({}) Проблема с подключением.</li>'.format(
                             datetime.now().time().strftime("%H:%M:%S")))
-        self.timer.singleShot(1000, self.update_chat)
+        self.timer.singleShot(1000, self.send_update_request)
 
 
     def closeEvent(self, event):
