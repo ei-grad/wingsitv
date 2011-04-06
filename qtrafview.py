@@ -79,8 +79,7 @@ class tvTable(QtGui.QTableWidget):
       self.setRowCount(irow + 1)
       d = QTableWidgetItem(str(row[0]))
       h = QTableWidgetItem(str(row[1]))
-      s = row[2] / int(str(self.parent.comboTrafSize))
-      s = QTableWidgetItem(str(s)) ## TODO: gb, mb, etc..
+      s = QTableWidgetItem(str(self.parent.comboTrafSize.calc(row[2])))
       self.setItem(irow, 0, d)
       self.setItem(irow, 1, h)
       self.setItem(irow, 2, s)
@@ -99,13 +98,19 @@ class tvComboTrafType(QtGui.QComboBox):
     return str(self.currentIndex())
 
 class tvComboTrafSize(QtGui.QComboBox):
-  items = ('Gb', 'Mb', 'Kb', 'b')
+  items = ('b', 'Kb', 'Mb', 'Gb')
 
   def __init__(self, parent=None):
     super(tvComboTrafSize, self).__init__(parent)
 
     self.clear()
     [ self.addItem(i) for i in self.items ]
+    self.setCurrentIndex(2)
+
+  def calc(self, size):
+    for i in range(self.currentIndex()):
+      size /= 1024
+    return size
 
   def __str__(self):
     i, r = len(self.items[1:]) - self.currentIndex(), 1
