@@ -73,17 +73,28 @@ class tvTable(QtGui.QTableWidget):
     self.curs.execute(q)
     #print("debug", ttype, q)
 
-    irow = 0
+    irow = 1
+    fullsum = 0
     self.myclear()
     for row in self.curs:
       self.setRowCount(irow + 1)
       d = QTableWidgetItem(str(row[0]))
-      h = QTableWidgetItem(str(row[1]))
-      s = QTableWidgetItem(str(self.parent.comboTrafSize.calc(row[2])))
+      h = QTableWidgetItem("{:02}:00".format(row[1]))
+      s = row[2]
+      fullsum += s
+      s = QTableWidgetItem(self.parent.comboTrafSize.calc(s))
       self.setItem(irow, 0, d)
       self.setItem(irow, 1, h)
       self.setItem(irow, 2, s)
       irow += 1
+
+    s = QTableWidgetItem("Итого:")
+    s.setTextAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+    self.setItem(0, 1, s)
+
+    s = QTableWidgetItem(self.parent.comboTrafSize.calc(fullsum))
+    s.setForeground(QtGui.QBrush(QtGui.QColor(244, 0, 0)))
+    self.setItem(0, 2, s)
 
 class tvComboTrafType(QtGui.QComboBox):
   items = ('Входящий', 'Исходящий')
@@ -110,7 +121,7 @@ class tvComboTrafSize(QtGui.QComboBox):
   def calc(self, size):
     for i in range(self.currentIndex()):
       size /= 1024
-    return size
+    return "{:.4f}".format(size)
 
   def __str__(self):
     i, r = len(self.items[1:]) - self.currentIndex(), 1
