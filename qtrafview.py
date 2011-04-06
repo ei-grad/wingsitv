@@ -32,9 +32,12 @@ class tvDateEdit(QtGui.QDateEdit):
 
 class tvTimeEdit(QtGui.QTimeEdit):
 
-  def __init__(self, parent=None):
+  def __init__(self, parent=None, hour=-1):
     super(tvTimeEdit, self).__init__(parent)
-    self.setTime(QtCore.QTime().currentTime())
+    if hour < 0 or hour > 23:
+      self.setTime(QtCore.QTime().currentTime())
+    else:
+      self.setTime(QtCore.QTime(hour, 0))
 
   def __str__(self):
     return "{}".format(self.time().toString("h"))
@@ -78,13 +81,10 @@ class tvTable(QtGui.QTableWidget):
     self.myclear()
     for row in self.curs:
       self.setRowCount(irow + 1)
-      d = QTableWidgetItem(str(row[0]))
-      h = QTableWidgetItem("{:02}:00".format(row[1]))
-      s = row[2]
-      fullsum += s
-      s = QTableWidgetItem(self.parent.comboTrafSize.calc(s))
-      self.setItem(irow, 0, d)
-      self.setItem(irow, 1, h)
+      fullsum += row[2]
+      s = QTableWidgetItem(self.parent.comboTrafSize.calc(row[2]))
+      self.setItem(irow, 0, QTableWidgetItem(str(row[0])))
+      self.setItem(irow, 1, QTableWidgetItem("{:02}:00".format(row[1])))
       self.setItem(irow, 2, s)
       irow += 1
 
@@ -146,7 +146,7 @@ class QTrafView(QtGui.QWidget):
     ## times
     hboxTRange = QtGui.QHBoxLayout()
     hboxTRange.addWidget(QtGui.QLabel("Интервал время", self))
-    self.timeS = tvTimeEdit(self)
+    self.timeS = tvTimeEdit(self, 0)
     self.timeE = tvTimeEdit(self)
     hboxTRange.addWidget(self.timeS)
     hboxTRange.addWidget(self.timeE)
