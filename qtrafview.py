@@ -11,6 +11,7 @@ from PyQt4.QtGui import QTableWidgetItem
 from settings import DEFAULT_WORKDIR
 
 dbfile = join(DEFAULT_WORKDIR, 'sqlite.db')
+ipath = join('share', '22')
 
 class tvDateEdit(QtGui.QDateEdit):
   """ QDateEdit + QCalendar """
@@ -83,6 +84,8 @@ class tvTable(QtGui.QTableWidget):
       self.setRowCount(irow + 1)
       fullsum += row[2]
       s = QTableWidgetItem(self.parent.comboTrafSize.calc(row[2]))
+      i = self.parent.comboTrafType.items[int(str(self.parent.comboTrafType))][1]
+      s.setIcon(QtGui.QIcon(join(ipath, i)))
       self.setItem(irow, 0, QTableWidgetItem(str(row[0])))
       self.setItem(irow, 1, QTableWidgetItem("{:02}:00".format(row[1])))
       self.setItem(irow, 2, s)
@@ -97,13 +100,14 @@ class tvTable(QtGui.QTableWidget):
     self.setItem(0, 2, s)
 
 class tvComboTrafType(QtGui.QComboBox):
-  items = ('Входящий', 'Исходящий')
+  items = (('Входящий', 'left.png'),
+          ('Исходящий', 'right.png'))
 
   def __init__(self, parent=None):
     super(tvComboTrafType, self).__init__(parent)
 
     self.clear()
-    [ self.addItem(i) for i in self.items ]
+    [ self.addItem(QtGui.QIcon(join(ipath, i[1])), i[0]) for i in self.items ]
 
   def __str__(self):
     return str(self.currentIndex())
