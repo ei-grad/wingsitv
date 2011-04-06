@@ -65,12 +65,12 @@ class tvTable(QtGui.QTableWidget):
     if not self.sqlconn or not self.curs:
       return
 
-    ttype = "amounts_in" if str(self.parent.comboTrafType) == 0 else "amounts_out"
+    ttype = "amounts_in" if str(self.parent.comboTrafType) == '0' else "amounts_out"
     q = "SELECT date,hour,amount FROM '{}' WHERE date > '{}'"
     q+= " AND date < '{}' AND hour > '{}' AND hour < '{}'"
     q = q.format(ttype, dateSE[0], dateSE[1], timeSE[0], timeSE[1])
     self.curs.execute(q)
-    ## print("debug", q)
+    #print("debug", ttype, q)
 
     irow = 0
     self.myclear()
