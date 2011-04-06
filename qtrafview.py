@@ -152,7 +152,7 @@ class tvToolSync(QtGui.QToolButton):
     self.clicked.connect(self.__sync)
 
   def __sync(self):
-    QtGui.QMessageBox.critical(self, "Ахтунг", "Синхронизироваться в доработке")
+    QtGui.QMessageBox.critical(self, "Ахтунг", "Синхронизация в доработке")
     self.setVisible(False)
 
 class QTrafView(QtGui.QWidget):
