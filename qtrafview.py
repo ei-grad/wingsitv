@@ -48,6 +48,7 @@ class tvTimeEdit(QtGui.QTimeEdit):
 
 class tvTable(QtGui.QTableWidget):
   labels = ('Дата', 'Время', 'Объем')
+  backcolor = QtGui.QColor(227, 227, 227)
 
   def __init__(self, parent=None):
     super(tvTable, self).__init__(parent)
@@ -83,11 +84,20 @@ class tvTable(QtGui.QTableWidget):
     for row in self.curs:
       self.setRowCount(irow + 1)
       fullsum += row[2]
+      d = QTableWidgetItem(str(row[0]))
+      h = QTableWidgetItem("{:02}:00".format(row[1]))
+
       s = QTableWidgetItem(self.parent.comboTrafSize.calc(row[2]))
       i = self.parent.comboTrafType.items[int(str(self.parent.comboTrafType))][1]
       s.setIcon(QtGui.QIcon(join(ipath, i)))
-      self.setItem(irow, 0, QTableWidgetItem(str(row[0])))
-      self.setItem(irow, 1, QTableWidgetItem("{:02}:00".format(row[1])))
+
+      if not irow % 2 == 0:
+        d.setBackgroundColor(self.backcolor)
+        h.setBackgroundColor(self.backcolor)
+        s.setBackgroundColor(self.backcolor)
+      
+      self.setItem(irow, 0, d)
+      self.setItem(irow, 1, h)
       self.setItem(irow, 2, s)
       irow += 1
 
