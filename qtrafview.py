@@ -143,6 +143,18 @@ class tvComboTrafSize(QtGui.QComboBox):
       r *= 1024
     return str(r)
 
+class tvToolSync(QtGui.QToolButton):
+
+  def __init__(self, parent=None):
+    super(tvToolSync, self).__init__(parent)
+    self.setIcon(QtGui.QIcon(join(ipath, 'sync.png')))
+    self.setToolTip("Синхронизироваться с сервером")
+    self.clicked.connect(self.__sync)
+
+  def __sync(self):
+    QtGui.QMessageBox.critical(self, "Ахтунг", "Синхронизироваться в доработке")
+    self.setVisible(False)
+
 class QTrafView(QtGui.QWidget):
 
   def __init__(self, parent=None):
@@ -154,8 +166,11 @@ class QTrafView(QtGui.QWidget):
     hboxDRange.addWidget(QtGui.QLabel("Интервал дат", self))
     self.dateS = tvDateEdit(self)
     self.dateE = tvDateEdit(self)
+    self.pushSync = tvToolSync(self)
+
     hboxDRange.addWidget(self.dateS)
     hboxDRange.addWidget(self.dateE)
+    hboxDRange.addWidget(self.pushSync)
 
     ## times
     hboxTRange = QtGui.QHBoxLayout()
