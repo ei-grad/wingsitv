@@ -51,7 +51,7 @@ class QWingsChatLineEdit(QtGui.QLineEdit):
                         self.history_index = 0
                         self.history.insert(0, '')
                     self.clear()
-            except socket.error:
+            except:
                 QtGui.QMessageBox("Ошибка", "Не удалось отправить сообщение!").show()
             event.accept()
         else:
@@ -85,6 +85,7 @@ class QWingsChat(QtGui.QWidget):
             login = config['chat']['login']
 
         self.chat = QWebView()
+        self.chat.setContextMenuPolicy(QtCore.Qt.PreventContextMenu)
         self.message = QWingsChatLineEdit(login)
 
         vb = QtGui.QVBoxLayout()
