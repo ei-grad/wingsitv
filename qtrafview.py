@@ -23,11 +23,11 @@ class tvDateEdit(QtGui.QDateEdit):
     self.setCalendarWidget(QtGui.QCalendarWidget(self))
 
 class tvTimeEdit(QtGui.QTimeEdit):
-  
+
   def __init__(self, parent=None):
     super(tvTimeEdit, self).__init__(parent)
     self.setTime(QtCore.QTime().currentTime())
-  
+
   def __str__(self):
     return "{}:00".format(self.time().toString("hh"))
 
@@ -59,6 +59,15 @@ class tvComboTrafType(QtGui.QComboBox):
   def __str__(self):
     return self.currentIndex()
 
+class tvComboTrafSize(QtGui.QComboBox):
+  items = ('Gb', 'Mb', 'Kb', 'b')
+
+  def __init__(self, parent=None):
+    super(tvComboTrafSize, self).__init__(parent)
+
+    self.clear()
+    [ self.addItem(i) for i in self.items ]
+
 class QTrafView(QtGui.QWidget):
 
   def __init__(self, parent=None):
@@ -86,7 +95,9 @@ class QTrafView(QtGui.QWidget):
     hboxTablePanel = QtGui.QHBoxLayout()
     hboxTablePanel.addWidget(QtGui.QLabel("Трафик", self))
     self.comboTrafType = tvComboTrafType(self)
+    self.comboTrafSize = tvComboTrafSize(self)
     hboxTablePanel.addWidget(self.comboTrafType)
+    hboxTablePanel.addWidget(self.comboTrafSize)
       #
     vboxTable = QtGui.QVBoxLayout()
     self.table = tvTable(self)
@@ -97,6 +108,8 @@ class QTrafView(QtGui.QWidget):
     vboxRoot.addLayout(hboxDRange)
     vboxRoot.addLayout(hboxTRange)
     vboxRoot.addLayout(vboxTable)
+
+    #
     self.setLayout(vboxRoot)
     self.setWindowTitle("Обзор трафика")
 
