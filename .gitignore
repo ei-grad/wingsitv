@@ -1,0 +1,8 @@
+.hg/*
+build/*
+.directory
+*__pycache__*/*
+
+*~
+*.swp
+*.py[cowd]

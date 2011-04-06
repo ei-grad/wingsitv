@@ -10,6 +10,9 @@ DEFAULT_WORKDIR = os.path.expanduser(os.path.join('~', '.wingsitv'))
 config = RawConfigParser()
 configfile = os.path.join(DEFAULT_WORKDIR, 'config.ini')
 
+if not os.path.exists(DEFAULT_WORKDIR):
+    os.makedirs(DEFAULT_WORKDIR)
+
 def save_config():
     with open(configfile, 'w') as f: config.write(f)
 

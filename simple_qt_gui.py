@@ -11,7 +11,7 @@ from settings import config, save_config
 
 from utm5client import UTM5Client
 from qwingschat import QWingsChat
-
+from qtrafview import QTrafView
 
 class QUtm5Gui(QtGui.QApplication):
     def __init__(self, argv):
@@ -24,6 +24,7 @@ class QUtm5Gui(QtGui.QApplication):
         self.utm5client = UTM5Client(auto_auth=True)
 
         self.chat = QWingsChat(app=self)
+        self.traf = QTrafView()
         if config['chat']['show'] == "True":
             self.chat.show()
 
@@ -96,7 +97,7 @@ class QUtm5Gui(QtGui.QApplication):
         save_config()
 
     def toggle_traffic(self):
-        pass
+        self.traf.setVisible(not self.traf.isVisible())
 
     def on_sys_tray_activated(self, reason):
         if reason == QtGui.QSystemTrayIcon.Trigger: # click
