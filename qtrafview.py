@@ -62,6 +62,7 @@ class tvTable(QtGui.QTableWidget):
     if not self.sqlconn:
       self.sqlconn = sqlite3.connect(dbfile)
       self.curs = self.sqlconn.cursor()
+
     if not self.sqlconn or not self.curs:
       return
 
@@ -78,7 +79,8 @@ class tvTable(QtGui.QTableWidget):
       self.setRowCount(irow + 1)
       d = QTableWidgetItem(str(row[0]))
       h = QTableWidgetItem(str(row[1]))
-      s = QTableWidgetItem(str(row[2])) ## TODO: gb, mb, etc..
+      s = row[2] / int(str(self.parent.comboTrafSize))
+      s = QTableWidgetItem(str(s)) ## TODO: gb, mb, etc..
       self.setItem(irow, 0, d)
       self.setItem(irow, 1, h)
       self.setItem(irow, 2, s)
@@ -104,6 +106,12 @@ class tvComboTrafSize(QtGui.QComboBox):
 
     self.clear()
     [ self.addItem(i) for i in self.items ]
+
+  def __str__(self):
+    i, r = len(self.items[1:]) - self.currentIndex(), 1
+    for i in range(i):
+      r *= 1024
+    return str(r)
 
 class QTrafView(QtGui.QWidget):
 
@@ -155,11 +163,17 @@ class QTrafView(QtGui.QWidget):
     self.timeE.timeChanged.connect(self.__timeCheck)
     self.dateS.dateChanged.connect(self.__timeCheck)
     self.dateE.dateChanged.connect(self.__timeCheck)
+    self.comboTrafType.currentIndexChanged.connect(self.__timeCheck)
+    self.comboTrafSize.currentIndexChanged.connect(self.__timeCheck)
 
   __lockQuery = False
   def __timeCheck(self):
     self.__lockQuery = self.timeS == self.timeE
-    if not self.__lockQuery:
+    if self.__lockQuery:
+      self.setWindowTitle("Ааай, проверьте интервалы! ;)")
+
+    else:
+      self.setWindowTitle("Обзор трафика от {} по {}".format(str(self.dateS),str(self.dateE)))
       self.table.refresh(
           (str(self.dateS), str(self.dateE)),
           (str(self.timeS), str(self.timeE)))
