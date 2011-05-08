@@ -72,24 +72,11 @@ class QUtm5Gui(QtGui.QApplication):
         def hum(size):
             return '%.2f МиБ' % (float(size)/(2**20),)
 
-        self.trayIcon.setToolTip(('<h3>Трафик</h3>'
-            '<table>'
-            '<tr>'
-                '<th></th>'
-                '<th>Входящий</th>'
-                '<th>Исходящий</th>'
-            '</tr>'
-            '<tr>'
-                '<td>Дневной:</td>'
-                '<td>%s</td>'
-                '<td>%s</td>'
-            '</tr>'
-            '<tr>'
-                '<td>Полный:</td>'
-                '<td>%s</td>'
-                '<td>%s</td>'
-            '</tr>'
-            '</table>') % tuple(map(hum, daytime + full)))
+        tooltip = ('Дневной входящий: {}\r\n'
+                'Дневной исходящий: {}\r\n'
+                'Полный входящий: {}\r\n'
+                'Полный исходящий: {}').format(*map(hum, daytime + full))
+        self.trayIcon.setToolTip(tooltip)
 
     def toggle_chat(self):
         self.chat.setVisible(not self.chat.isVisible())

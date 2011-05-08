@@ -2,8 +2,8 @@
 # coding: utf-8
 
 import os
-from time import time
 from datetime import datetime
+from urllib.parse import urlencode
 from urllib.error import URLError
 from random import randint
 import socket
@@ -12,22 +12,26 @@ from PyQt4.QtCore import Qt
 from PyQt4 import QtGui
 from PyQt4 import QtCore
 from PyQt4.QtWebKit import QWebView
-from PyQt4.QtNetwork import QHttp
+from PyQt4.QtNetwork import QHttp, QHttpRequestHeader
 
 from settings import config, save_config
-
-from wingschat import *
+from wingschat import ChatMsgParser
 
 
 class QWingsChatLineEdit(QtGui.QLineEdit):
 
-
-    def __init__(self, login, parent=None):
+    def __init__(self, login, uid=2303, parent=None):
         super(QWingsChatLineEdit, self).__init__(parent)
         self.parent = parent
         self.history = ['']
         self.history_index = 0
         self.login = login
+        self.uid = uid
+        self.http = QHttp('torrent.mnx.net.ru')
+        self.http_header = QHttpRequestHeader("POST", "/ajaxchat/sendChatData.php")
+        self.http_header.setValue('Host', 'torrent.mnx.net.ru')
+        self.http_header.setContentType("application/x-www-form-urlencoded")
+        self.connect(self.http, QtCore.SIGNAL("requestFinished(int,bool)"), self.postCompleted)
 
     def keyPressEvent(self, event):
         key = event.key()
@@ -42,22 +46,26 @@ class QWingsChatLineEdit(QtGui.QLineEdit):
                 self.setText(self.history[self.history_index])
             event.accept()
         elif key == Qt.Key_Return:
-            try:
-                msg = self.text()
-                if msg:
-                    send_message(self.login, msg)
-                    if len(self.history) == 1 or msg != self.history[1]:
-                        self.history[0] = msg
-                        self.history_index = 0
-                        self.history.insert(0, '')
-                    self.clear()
-            except:
-                QtGui.QMessageBox("Ошибка", "Не удалось отправить сообщение!").show()
+            msg = str(self.text())
+            if msg:
+                data = bytes(urlencode({'n': self.login,'c': msg,'u': self.uid}), 'utf-8')
+                self.http.request(self.http_header, data);
+                if len(self.history) == 1 or msg != self.history[1]:
+                    self.history[0] = msg
+                    self.history_index = 0
+                    self.history.insert(0, '')
+                self.clear()
             event.accept()
         else:
             super(QWingsChatLineEdit, self).keyPressEvent(event)
             if self.history_index == 0:
                 self.history[0] = self.text()
+
+    def postCompleted(self, msgid, error):
+        if error:
+            m = QtGui.QMessageBox()
+            m.setText("Не удалось отправить сообщение!")
+            m.exec()
 
 class QWingsChat(QtGui.QWidget):
 
