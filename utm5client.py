@@ -276,7 +276,7 @@ if __name__ == '__main__':
     opt, args = parser.parse_args()
 
     if opt.debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(funcName): %(message)s")
+        logging.basicConfig(level=logging.DEBUG, format="%(funcName)s: %(message)s")
     elif opt.verbose:
         logging.basicConfig(level=logging.INFO, format="%(message)s")
     else:
